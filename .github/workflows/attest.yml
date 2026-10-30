@@ -2,6 +2,10 @@ name: attest-test
 on:
   workflow_dispatch:
     inputs:
+      subject_name:
+        description: full subject-name (blank = registry host form)
+        type: string
+        default: ""
       push_to_registry:
         description: push-to-registry value
         type: boolean
@@ -41,6 +45,6 @@ jobs:
           tags: ${{ env.REG }}/attest-test:${{ github.run_id }}
       - uses: actions/attest-build-provenance@v3
         with:
-          subject-name: ${{ env.REG }}/attest-test
+          subject-name: ${{ inputs.subject_name != '' && inputs.subject_name || format('{0}/attest-test', env.REG) }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: ${{ inputs.push_to_registry }}
