@@ -24,14 +24,6 @@ jobs:
           JF_URL: ${{ env.JF_URL }}
         with:
           oidc-provider-name: evd449691-github
-      - name: debug v2
-        env:
-          U: ${{ steps.jfrog.outputs.oidc-user }}
-          T: ${{ steps.jfrog.outputs.oidc-token }}
-        run: |
-          echo "user length: ${#U}"
-          curl -si -u "$U:$T" https://hts1.jfrog.io/v2/ | head -20
-          curl -si -H "Authorization: Bearer $T" https://hts1.jfrog.io/artifactory/api/system/ping | head -10
       - uses: docker/login-action@v3
         with:
           registry: hts1.jfrog.io
