@@ -1,0 +1,51 @@
+name: attest-cli-test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+env:
+  JF_URL: https://hts1.jfrog.io
+  REPO: evd449691-docker-local
+  REG: hts1-evd449691-docker-local.jfrog.io
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jfrog/setup-jfrog-cli@v4
+        id: jfrog
+        env:
+          JF_URL: ${{ env.JF_URL }}
+          JFROG_CLI_BUILD_NAME: attest-cli-test
+        with:
+          oidc-provider-name: evd449691-github
+          disable-auto-evidence-collection: true
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REG }}
+          username: ${{ steps.jfrog.outputs.oidc-user }}
+          password: ${{ steps.jfrog.outputs.oidc-token }}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          sbom: false
+          tags: ${{ env.REG }}/attest-test:${{ github.run_id }}
+      - id: attest
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ env.REG }}/attest-test
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: false
+      - name: Attach evidence with the JFrog CLI
+        run: |
+          jf evd create \
+            --subject-repo-path "${REPO}/attest-test/${{ github.run_id }}/list.manifest.json" \
+            --sigstore-bundle "${{ steps.attest.outputs.bundle-path }}"
